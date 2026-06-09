@@ -60,7 +60,7 @@ Thumbs.db
 !README.md
 !DOCKER_README.md
 !quick_commands.md
-!kubernetes_knowledge.md
+!knowledge_base.md
 
 # ruff cache
 .ruff_cache/
