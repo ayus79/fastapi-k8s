@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+  namespace: fastapi-k8s
+  labels:
+    app: fastapi
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fastapi
+  strategy:
+    type: RollingUpdate # zero-downtime deploys
+    rollingUpdate:
+      maxSurge: 1 # spin up 1 extra pod during update
+      maxUnavailable: 0 # never take a pod down before new one is ready
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+        - name: fastapi
+          image: <your-dockerhub-username>/fastapi-k8s:v1
+          ports:
+            - containerPort: 8010
+
+          # inject env vars from ConfigMap and Secret
+          envFrom:
+            - configMapRef:
+                name: fastapi-config
+            - secretRef:
+                name: fastapi-secret
+
+          # liveness: restart pod if app is frozen/crashed
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8010
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+
+          # readiness: only send traffic when app is truly ready
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8010
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 2
+
+          # always set these - prevents noisy neighbours in shared clusters
+          resources:
+            requests:
+              cpu: "100m" # 0.1 CPU core guaranteed
+              memory: "128Mi"
+            limits:
+              cpu: "500m" # max 0.5 CPU core
+              memory: "256Mi"
